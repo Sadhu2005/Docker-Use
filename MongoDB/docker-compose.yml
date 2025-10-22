@@ -1,0 +1,83 @@
+# Specifies the version of the Docker Compose file format. '3.8' is a modern, stable version.
+version: '3.8'
+
+# This 'services' block is where we define all the containers we want to run.
+services:
+  
+  # This is our first service: the MongoDB database itself.
+  mongodb:
+    # 'image' tells Docker which image to pull from Docker Hub.
+    image: mongo:latest
+    # 'container_name' gives our container a predictable name you can see with 'docker ps'.
+    container_name: mongodb
+    # 'restart: always' ensures the container automatically restarts if it crashes or the server reboots.
+    restart: always
+    # 'ports' maps ports from the container to your host machine.
+    # Format is "HOST:CONTAINER". We're mapping MongoDB's default port 27017.
+    ports:
+      - "27017:27017"
+    # 'environment' sets environment variables inside the container.
+    # This is how we set the root username and password for the database on its first run.
+    # !! IMPORTANT: Change these for any real project!
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=root
+      - MONGO_INITDB_ROOT_PASSWORD=password
+    # 'volumes' create persistent storage. Without this, your database data
+    # would be erased every time you stop the container.
+    # 'mongo-data' is a 'named volume' (defined at the bottom of this file)
+    # '/data/db' is the path *inside* the container where MongoDB stores its data.
+    volumes:
+      - mongo-data:/data/db
+    # 'networks' connects our service to a custom network.
+    # This allows containers to find each other by their service name (e.g., 'mongodb').
+    networks:
+      - mongo-network
+
+  # This is our second service: the Mongo Express web UI.
+  mongo-express-ui:
+    # We pull the official 'mongo-express' image.
+    image: mongo-express:latest
+    container_name: mongo-express-ui
+    restart: always
+    # Mongo Express runs on port 8081 inside the container. We map it to 8081 on our host.
+    ports:
+      - "8081:8081"
+    # This is the most important part for the UI.
+    # We tell Mongo Express how to find and log in to our 'mongodb' service.
+    environment:
+      # This 'mongodb' matches the service name of our database.
+      - ME_CONFIG_MONGODB_SERVER=mongodb
+      # This tells Mongo Express to use the admin credentials we're providing.
+      - ME_CONFIG_MONGODB_ENABLE_ADMIN=true
+      # These MUST match the credentials set for the 'mongodb' service above.
+      - ME_CONFIG_MONGODB_ADMINUSERNAME=root
+      - ME_CONFIG_MONGODB_ADMINPASSWORD=password
+      
+      # --- ADD THESE LINES ---
+      # These set the username and password for the Mongo Express *web page* itself.
+      # By setting them, you remove the "admin:pass" default and the warning.
+      # We can just re-use the same credentials for simplicity.
+      - ME_CONFIG_BASICAUTH_USERNAME=root
+      - ME_CONFIG_BASICAUTH_PASSWORD=password
+      # --- END OF ADDED LINES ---
+
+    # 'depends_on' tells Docker Compose to wait for the 'mongodb' service
+    # to start before starting this one. This prevents connection errors.
+    depends_on:
+      - mongodb
+    # We add this service to the same network so it can talk to 'mongodb'.
+    networks:
+      - mongo-network
+
+# This top-level 'volumes' block officially defines the named volume we used.
+# 'driver: local' just means it will be managed by Docker on the host machine.
+volumes:
+  mongo-data:
+    driver: local
+
+# This top-level 'networks' block defines the custom network.
+# 'driver: bridge' is the standard for allowing containers to communicate.
+networks:
+  mongo-network:
+    driver: bridge
+

@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  # This is your PostgreSQL Database
+  db:
+    image: postgres:latest
+    container_name: my-postgres-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_PASSWORD=mysecretpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  # This is the new Web-based UI (pgAdmin)
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: my-pgadmin-ui
+    restart: unless-stopped
+    environment:
+      # This is the login for the pgAdmin UI itself
+      - PGADMIN_DEFAULT_EMAIL=admin@admin.com
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    ports:
+      # You will access the UI at http://localhost:8080
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      # This tells pgAdmin to wait until the db is running
+      - db
+
+volumes:
+  pg_data:
+  pgadmin_data:

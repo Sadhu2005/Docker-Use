@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # 1. PostgreSQL Database
+  db:
+    image: postgres:latest
+    container_name: my-postgres-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: mysecretpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+  # 2. pgAdmin (Web UI for PostgreSQL)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: my-pgadmin-ui
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@admin.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+    ports:
+      - "8080:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - db
+
+  # 3. n8n (Automation Tool)
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: my-n8n-automation
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - GENERIC_TIMEZONE=Asia/Kolkata
+      - WEBHOOK_URL=http://localhost:5678/
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - db
+
+  # 4. JupyterLab (AI/ML Notebook)
+  jupyter:
+    image: jupyter/scipy-notebook:latest
+    container_name: my-jupyter-lab
+    restart: unless-stopped
+    ports:
+      - "8888:8888"
+    environment:
+      # Use 'admin' as the password
+      - JUPYTER_TOKEN=admin
+    volumes:
+      # This links your local 'notebooks' folder to the container
+      # All your .ipynb files will be saved here!
+      - ./notebooks:/home/jovyan/work
+
+  # 5. Portainer (Web UI for Docker)
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: my-portainer-ui
+    restart: unless-stopped
+    ports:
+      - "9443:9443"
+      - "8000:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+
+# This is where all the persistent data is stored
+volumes:
+  pg_data:
+  pgadmin_data:
+  n8n_data:
+  portainer_data:
